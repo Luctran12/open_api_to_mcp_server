@@ -20,6 +20,8 @@ type HTTPHandler struct {
 	auth   *config.AuthConfig
 }
 
+
+
 // NewHTTPHandler creates a new HTTP handler
 func NewHTTPHandler(auth *config.AuthConfig) *HTTPHandler {
 	return &HTTPHandler{
