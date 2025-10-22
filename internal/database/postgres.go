@@ -45,6 +45,23 @@ func (db *DB) CreateDeveloper(email, passwordHash, apiKeyHash, apiKeyPrefix stri
 	return id, err
 }
 
+func(db *DB)GetNumberOfOpenAPISpecByDeveloperID(developerID string) (int, error) {
+	rows, err := db.conn.Query(`
+		SELECT id, developer_id, spec_name, spec_content, created_at, updated_at
+		FROM openapi_specs
+		WHERE developer_id = $1
+	`, developerID)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	var count int
+	for rows.Next() {
+		count++
+	}
+	return count, nil
+}
+
 func (db *DB) GetDeveloperByAPIKey(apiKeyHash string) (*Developer, error) {
 	var dev Developer
 	err := db.conn.QueryRow(`
