@@ -9,12 +9,12 @@ import (
 
 // ToolDefinition represents a generated tool from OpenAPI
 type ToolDefinition struct {
-	Name        string
-	Description string
-	Method      string
-	URL         string
+	Name         string
+	Description  string
+	Method       string
+	URL          string
 	RequiresAuth bool
-	InputSchema mcp.ToolInputSchema
+	InputSchema  mcp.ToolInputSchema
 }
 
 // Generator generates MCP tools from OpenAPI specifications
@@ -34,6 +34,10 @@ func (g *Generator) Generate(spec *Spec) ([]*ToolDefinition, error) {
 		operations := g.extractOperations(pathItem)
 
 		for method, operation := range operations {
+			// Skip undefined operations to avoid nil pointer dereference
+			if operation == nil {
+				continue
+			}
 			tool := g.createToolDefinition(method, path, operation, baseURL, spec)
 			tools = append(tools, tool)
 		}
@@ -60,12 +64,12 @@ func (g *Generator) createToolDefinition(method, path string, operation *Operati
 	inputSchema := g.createInputSchema(operation)
 
 	return &ToolDefinition{
-		Name:        toolName,
-		Description: description,
-		Method:      method,
-		URL:         fullURL,
+		Name:         toolName,
+		Description:  description,
+		Method:       method,
+		URL:          fullURL,
 		RequiresAuth: requiresAuth,
-		InputSchema: inputSchema,
+		InputSchema:  inputSchema,
 	}
 }
 

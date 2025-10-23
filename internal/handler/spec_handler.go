@@ -3,11 +3,15 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"open_api_to_mcp_server/internal/database"
 	"open_api_to_mcp_server/internal/openapi"
 
 	"open_api_to_mcp_server/pkg/utils"
+
+	
 )
 
 type SpecHandler struct {
@@ -20,13 +24,54 @@ func NewSpecHandler(db *database.DB) *SpecHandler {
 
 // POST /api/specs
 func (h *SpecHandler) UploadSpec(w http.ResponseWriter, r *http.Request) {
+	const MAX_OPENAPI_SPEC_PER_DEVELOPER = 10
 	// Get developer from context (set by auth middleware)
 	developer := r.Context().Value("developer").(*database.Developer)
+	numberOfOpenAPISpec, err := h.db.GetNumberOfOpenAPISpecByDeveloperID(developer.ID)
+	if err != nil {
+		utils.SendError(w, 500, "Failed to get number of openapi specs")
+		return
+	}
+	if numberOfOpenAPISpec >= MAX_OPENAPI_SPEC_PER_DEVELOPER {
+		utils.SendError(w, 400, "Maximum number of openapi specs reached")
+		return
+	}
 
-	// Parse OpenAPI spec
+	// Expect multipart/form-data with a file field named "file" (or fallback to "spec")
+	if err := r.ParseMultipartForm(1 << 20); err != nil { // 1MB
+		utils.SendError(w, 400, "Expected multipart/form-data with file upload")
+		fmt.Println(err.Error())
+		return
+	}
+
+	file, fileName, err := r.FormFile("file")
+	if err != nil {
+		// Fallback to a field named "spec"
+		file, _, err = r.FormFile("spec")
+		if err != nil {
+			utils.SendError(w, 400, "Missing file field 'file' or 'spec'")
+			return
+		}
+	}
+
+	// check file extension and file size
+	if _,err := utils.IsAllowedFileExtension(fileName); err != nil {
+		utils.SendError(w, 400, err.Error())
+		return
+	}
+	
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		utils.SendError(w, 400, "Unable to read uploaded file")
+		return
+	}
+
+	// Parse OpenAPI spec from uploaded JSON file
 	var spec openapi.Spec
-	if err := json.NewDecoder(r.Body).Decode(&spec); err != nil {
-		utils.SendError(w, 400, "Invalid OpenAPI spec format")
+	if err := json.Unmarshal(data, &spec); err != nil {
+		utils.SendError(w, 400, "Invalid OpenAPI spec JSON in file")
 		return
 	}
 
@@ -36,7 +81,7 @@ func (h *SpecHandler) UploadSpec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Save spec to database
+	// Save spec to database (store canonicalized JSON)
 	specJSON, _ := json.Marshal(spec)
 	specID, err := h.db.SaveOpenAPISpec(developer.ID, spec.Info.Title, specJSON)
 	if err != nil {
