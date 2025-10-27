@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"open_api_to_mcp_server/internal/config"
+	"open_api_to_mcp_server/pkg/config"
 	"os"
 
 	"github.com/mark3labs/mcp-go/mcp"

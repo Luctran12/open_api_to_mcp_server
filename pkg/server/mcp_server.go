@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"open_api_to_mcp_server/internal/config"
+	"open_api_to_mcp_server/pkg/config"
 	"open_api_to_mcp_server/internal/handler"
-	"open_api_to_mcp_server/internal/openapi"
+	"open_api_to_mcp_server/pkg/openapi"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -55,14 +55,14 @@ func (s *MCPServer) LoadTools(specPath string) error {
 	fmt.Printf("✅ Generated %d tools from OpenAPI spec\n", len(toolDefs))
 
 	for _, toolDef := range toolDefs {
-		s.addTool(toolDef)
+		s.AddTool(toolDef)
 		fmt.Printf("📋 Added tool: %s - %s\n", toolDef.Name, toolDef.Description)
 	}
 
 	return nil
 }
 
-func (s *MCPServer) addTool(toolDef *openapi.ToolDefinition) {
+func (s *MCPServer) AddTool(toolDef *openapi.ToolDefinition) {
 	tool := mcp.Tool{
 		Name:        toolDef.Name,
 		Description: toolDef.Description,
@@ -107,4 +107,8 @@ func (s *MCPServer) ReloadTools(specPath string) error {
 	s.toolHandlers = make(map[string]server.ToolHandlerFunc)
 
 	return s.LoadTools(specPath)
+}
+
+func (s *MCPServer) ServeStdio() error {
+	return server.ServeStdio(s.server)
 }

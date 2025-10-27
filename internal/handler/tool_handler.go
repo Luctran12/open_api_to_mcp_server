@@ -19,6 +19,9 @@ func NewToolHandler(db *database.DB) *ToolHandler {
 func (h *ToolHandler) GetTools(w http.ResponseWriter, r *http.Request) {
     developer := r.Context().Value("developer").(*database.Developer)
     
+    defer r.Body.Close()
+    
+
     // Load tools from database
     tools, err := h.db.GetDeveloperTools(developer.ID)
     if err != nil {

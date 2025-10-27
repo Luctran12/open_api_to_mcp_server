@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"open_api_to_mcp_server/internal/config"
+	"open_api_to_mcp_server/pkg/config"
 	"strings"
 	"time"
 

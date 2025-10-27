@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 	"open_api_to_mcp_server/internal/database"
-	"open_api_to_mcp_server/internal/openapi"
+	"open_api_to_mcp_server/pkg/openapi"
 
 	"open_api_to_mcp_server/pkg/utils"
 

@@ -62,6 +62,16 @@ func(db *DB)GetNumberOfOpenAPISpecByDeveloperID(developerID string) (int, error)
 	return count, nil
 }
 
+func (db *DB) GetOpenAPISpecByID(specID string) (*OpenAPISpec, error) {
+	var spec OpenAPISpec
+	err := db.conn.QueryRow(`
+		SELECT id, developer_id, spec_name, spec_content, created_at, updated_at
+		FROM openapi_specs
+		WHERE id = $1
+	`, specID).Scan(&spec.ID, &spec.DeveloperID, &spec.SpecName, &spec.SpecContent, &spec.CreatedAt, &spec.UpdatedAt)
+	return &spec, err
+}
+
 func (db *DB) GetDeveloperByAPIKey(apiKeyHash string) (*Developer, error) {
 	var dev Developer
 	err := db.conn.QueryRow(`

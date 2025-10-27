@@ -8,6 +8,7 @@ import (
 	"open_api_to_mcp_server/internal/handler"
 	"open_api_to_mcp_server/internal/middleware"
 	"os"
+	"path/filepath"
 
 	"github.com/joho/godotenv"
 )
@@ -20,6 +21,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
+	// Load database URL from environment
 	dbURL := os.Getenv("DATABASE_URL")
 	log.Println("DATABASE_URL:", dbURL)
 	if dbURL == "" {
@@ -61,6 +63,13 @@ func main() {
 
 	mux.Handle("/api/tools", middleware.Authenticate(config.DB)(http.HandlerFunc(toolHandler.GetTools)))
 	mux.Handle("/api/execute", middleware.Authenticate(config.DB)(http.HandlerFunc(executeHandler.Execute)))
+	mux.Handle("/api/build", middleware.Authenticate(config.DB)(http.HandlerFunc(executeHandler.Build)))
+	mux.Handle("/api/build/download/",
+	http.StripPrefix("/api/build/download/",
+		http.FileServer(http.Dir(filepath.Join(os.TempDir(), "builds"))),
+	),
+)
+
 
 	// Apply global middleware
 	handler := middleware.CORS(mux)

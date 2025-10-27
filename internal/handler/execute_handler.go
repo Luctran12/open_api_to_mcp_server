@@ -8,9 +8,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"open_api_to_mcp_server/internal/builder"
 	"open_api_to_mcp_server/internal/database"
+	"open_api_to_mcp_server/pkg/openapi"
 	"open_api_to_mcp_server/pkg/utils"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,6 +23,10 @@ import (
 
 type ExecuteHandler struct {
 	db *database.DB
+}
+
+type BuildRequest struct {
+	SpecID string `json:"spec_id"`
 }
 
 // urlValues là type alias để làm việc với URL parameters
@@ -43,6 +50,8 @@ func NewExecuteHandler(db *database.DB) *ExecuteHandler {
 func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	developer := r.Context().Value("developer").(*database.Developer)
 
+	defer r.Body.Close()
+	
 	// Extract end-user token (pass-through)
 	endUserToken := r.Header.Get("Authorization")
 	if endUserToken == "" {
@@ -107,6 +116,46 @@ func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 			Timestamp:       time.Now().Format(time.RFC3339),
 		},
 	})
+}
+
+func (h *ExecuteHandler) Build(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	//developer := r.Context().Value("developer").(*database.Developer)
+	var specId BuildRequest
+	if err := json.NewDecoder(r.Body).Decode(&specId); err != nil {
+		utils.SendError(w, 400, "Invalid request body" + err.Error())
+		return
+	}
+    // get spec from database by specId
+	spec, err := h.db.GetOpenAPISpecByID(specId.SpecID)
+	if err != nil {
+		utils.SendError(w, 404, "Spec not found")
+		return
+	}
+	// parse spec.content to OpenAPI spec by json.Unmarshal
+	var openapiSpec openapi.Spec
+	if err := json.Unmarshal(spec.SpecContent, &openapiSpec); err != nil {
+		utils.SendError(w, 400, "Failed to parse OpenAPI spec: " + err.Error())
+		return
+	}
+	// call BuildExecutable with openAPI 
+	executablePath, err := builder.BuildExecutable(openapiSpec)
+	
+	if err != nil {
+		utils.SendError(w, 500, err.Error())
+		return
+	}
+
+    downloadURL := fmt.Sprintf("http://%s/api/build/download/%s", r.Host, url.PathEscape(filepath.Base(executablePath)))
+
+	
+	utils.SendJSON(w, 200, utils.Response{
+		Success: true,
+		Data: map[string]interface{}{
+			"executable_path": downloadURL,
+		},
+	})
+	
 }
 
 func MakeHandler(method, urlPath string, requiresAuth bool) server.ToolHandlerFunc {
