@@ -133,18 +133,30 @@ func (h *SpecHandler) UploadSpec(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type SpecResponse struct {
+	ID          string    `json:"id"`
+    SpecName    string    `json:"spec_name"`
+}
+
 // GET /api/specs
 func (h *SpecHandler) ListSpecs(w http.ResponseWriter, r *http.Request) {
 	developer := r.Context().Value("developer").(*database.Developer)
 
 	specs, err := h.db.GetDeveloperSpecs(developer.ID)
+	specResponses := []SpecResponse{}
+	for _, spec := range specs {
+		specResponses = append(specResponses, SpecResponse{
+			ID:          spec.ID,
+			SpecName:    spec.SpecName,
+		})
+	}
 	if err != nil {
 		utils.SendError(w, 500, "Failed to load specs")
 		return
 	}
 
 	utils.SendSuccess(w, map[string]interface{}{
-		"specs": specs,
-		"count": len(specs),
+		"specs": specResponses,
+		"count": len(specResponses),
 	})
 }

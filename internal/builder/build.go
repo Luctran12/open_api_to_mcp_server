@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"html/template"
+	"text/template"
 	"open_api_to_mcp_server/pkg/openapi"
 	"os"
 	"os/exec"
@@ -108,7 +108,7 @@ func BuildExecutable(spec openapi.Spec) (string, error) {
 		return "", fmt.Errorf("failed to create output dir: %w", err)
 	}
 
-	// Tên file chính là tên spec, bỏ ký tự đặc biệt cho an toàn
+	// ✅ Tên file an toàn
 	safeName := strings.Map(func(r rune) rune {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' {
 			return r
@@ -125,15 +125,20 @@ func BuildExecutable(spec openapi.Spec) (string, error) {
 		return "", fmt.Errorf("parse template failed: %w", err)
 	}
 
-	specBytes, err := json.Marshal(spec)
+	// ✅ Chuẩn bị JSON cho template
+	specJSON, err := json.Marshal(spec)
 	if err != nil {
 		return "", fmt.Errorf("marshal spec failed: %w", err)
 	}
 
-	escaped := strings.ReplaceAll(string(specBytes), "`", "` + \"`\" + `")
-	buf := new(bytes.Buffer)
+	// 👉 Dùng template.JS để không escape
+	data := map[string]any{
+		"SpecJSON": string(specJSON),
+	}
 
-	if err := tmpl.Execute(buf, map[string]string{"SpecJSON": escaped}); err != nil {
+	// ✅ Render template
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", fmt.Errorf("execute template failed: %w", err)
 	}
 
@@ -152,5 +157,6 @@ func BuildExecutable(spec openapi.Spec) (string, error) {
 
 	return outputPath, nil
 }
+
 
 

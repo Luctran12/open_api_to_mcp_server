@@ -3,57 +3,72 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"open_api_to_mcp_server/pkg/config"
 	"open_api_to_mcp_server/pkg/openapi"
 	"open_api_to_mcp_server/pkg/server"
 	"os"
+	"path/filepath"
 )
 
 func main() {
+	// 🧾 Tạo file log trong cùng thư mục .exe ver 3:15
+	execPath, _ := os.Executable()
+	logDir := filepath.Dir(execPath)
+	logFile := filepath.Join(logDir, "mcp_error.log")
+
+	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		fmt.Println("❌ Cannot create log file:", err)
+		os.Exit(1)
+	}
+	defer f.Close()
+	log.SetOutput(f)
+
+	log.Println("🟢 MCP executable started")
 
 	specJSON := `{{ .SpecJSON }}`
 	var spec openapi.Spec
 	if err := json.Unmarshal([]byte(specJSON), &spec); err != nil {
-    	fmt.Println("❌ Failed to parse spec:", err)
-    	os.Exit(1)
-}
-
-	
-	// Create MCP server
-	mcpServer := server.NewMCPServer(&config.Config{
-		Server: config.ServerConfig{
-			Name: "openapi-client",
-			Version: "1.0.0",
-		},
-	})
-	
-	// Load initial OpenAPI spec
-	// specPath := "C:/Users/Lenovo/Desktop/open_api_to_mcp_server/openapi.json"
-	// fmt.Println("🔄 Loading OpenAPI specification...")
-	// tools, err := GenerateToolsFromOpenAPI(specPath) 
-	// tools: mcp.Tool, ToolHandlerFunc
-	//mcp.ToolDefinition can transform to mcp.Tool through mcpServer.addTool
-
-	toolDefinitions,err := openapi.NewGenerator().Generate(&spec)
-
-
-	if err != nil {
-		fmt.Printf("❌ Error generating tools: %v\n", err)
+		log.Printf("❌ Failed to parse spec: %v\n", err)
+		fmt.Println("❌ Failed to parse spec. Check mcp_error.log for details.")
 		os.Exit(1)
 	}
-	fmt.Printf("✅ Generated %d tools from OpenAPI spec\n", len(toolDefinitions))
 
-	// Maintain a local map of tool handlers for HTTP access
-	//toolHandlers := make(map[string]mcp_server.ToolHandlerFunc)
-	for _, tool := range toolDefinitions {
-		mcpServer.AddTool(tool)
-		//toolHandlers[tool.Name] = tool.Handler
-		//fmt.Printf("📋 Added tool: %s - %s\n", tool.Tool.Name, tool.Tool.Description)
+	// ⚙️ Tạo MCP server
+	cfg := &config.Config{
+		Server: config.ServerConfig{
+			Name:    "openapi-client",
+			Version: "1.0.0",
+		},
+	}
+	mcpServer := server.NewMCPServer(cfg)
+	if mcpServer == nil {
+		log.Println("❌ Failed to create MCP server (nil returned)")
+		fmt.Println("❌ Failed to create MCP server. Check mcp_error.log for details.")
+		os.Exit(1)
 	}
 
-	fmt.Println("🚀 Starting MCP server via stdio ...")
+	// 🧩 Generate tools
+	toolDefinitions, err := openapi.NewGenerator().Generate(&spec)
+	if err != nil {
+		log.Printf("❌ Error generating tools: %v\n", err)
+		fmt.Println("❌ Error generating tools. Check mcp_error.log for details.")
+		os.Exit(1)
+	}
+	log.Printf("✅ Generated %d tools from OpenAPI spec\n", len(toolDefinitions))
+
+	for _, tool := range toolDefinitions {
+		mcpServer.AddTool(tool)
+		log.Printf("📋 Added tool: %s\n", tool.Name)
+		
+	}
+
+	log.Println("🚀 Starting MCP server via stdio ...")
+
 	if err := mcpServer.ServeStdio(); err != nil {
-		fmt.Printf("❌ Stdio server error: %v\n", err)
+		log.Printf("❌ Stdio server error: %v\n", err)
+		fmt.Println("❌ MCP server failed. Check mcp_error.log for details.")
 		os.Exit(1)
 	}
 }
