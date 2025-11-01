@@ -43,6 +43,12 @@ func main() {
 	// Setup router
 	mux := http.NewServeMux()
 
+	//api for connection test
+	mux.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("bay bong"))
+	})
+
 	// Public routes
 	mux.HandleFunc("/api/auth/register", authHandler.Register)
 	mux.HandleFunc("/api/auth/login", authHandler.Login)
