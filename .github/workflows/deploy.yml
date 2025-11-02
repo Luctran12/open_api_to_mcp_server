@@ -1,0 +1,31 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [luc]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/ci-cd-key
+          chmod 600 ~/.ssh/ci-cd-key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            cd /home/azureuser/open-api-to-mcp-server
+            git pull origin luc
+            docker build -t open-api-to-mcp-server .
+            docker stop open-api-to-mcp-server || true
+            docker rm open-api-to-mcp-server || true
+            docker run -d --env-file .env -p 8081:8081 --name open-api-to-mcp-server open-api-to-mcp-server
+          EOF
