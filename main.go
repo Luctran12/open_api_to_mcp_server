@@ -14,7 +14,11 @@ import (
 )
 
 func main() {
-	// Load config
+	// create place for build files
+	buildDir := filepath.Join(os.TempDir(), "builds")
+	if err := os.MkdirAll(buildDir, 0755); err != nil {
+        log.Fatalf("Failed to create build directory: %v", err)
+    }
 
 
 	// Load database URL from environment
