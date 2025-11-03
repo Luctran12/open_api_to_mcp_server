@@ -83,6 +83,7 @@ func main() {
 			http.NotFound(w, r)
 			return
 		}
+		log.Println("📂 Serving from:", filePath)
 
 		w.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(filePath))
 		w.Header().Set("Content-Type", "application/octet-stream")

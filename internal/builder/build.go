@@ -2,17 +2,17 @@ package builder
 
 import (
 	"bytes"
-	_"embed"
+	_ "embed"
 	"encoding/json"
 	"fmt"
-	"text/template"
+	"log"
 	"open_api_to_mcp_server/pkg/openapi"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"text/template"
 	"unicode"
-	
 )
 
 // func BuildExecutable(spec openapi.Spec) (string, error) {
@@ -213,6 +213,7 @@ func BuildExecutable(spec openapi.Spec) (string, error) {
 
     // ✅ Build từ module root
     cmd := exec.Command("go", "build", "-o", outputPath, mainPath)
+	log.Println("out put path: ", outputPath)
     cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS=windows", "GOARCH=amd64")
     cmd.Dir = root  
 
