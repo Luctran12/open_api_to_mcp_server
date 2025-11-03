@@ -46,7 +46,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             # 1. Đi đến thư mục dự án (để lấy file .env)
-            cd /home/azureuser/open-api-to-mcp-server
+            cd /home/azureuser/open_api_to_mcp_server
             
             # 2. Đặt biến cho dễ quản lý
             IMAGE_NAME="ghcr.io/luctran12/open-api-to-mcp-server:latest"
@@ -56,20 +56,20 @@ jobs:
             #    (GITHUB_TOKEN cần được tạo và lưu trong secret tên là GHCR_TOKEN)
             #    LƯU Ý: Bạn cần tạo một Personal Access Token (classic) với quyền 'read:packages' 
             #    và lưu nó vào secret tên là GHCR_TOKEN
-            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u luctran12 --password-stdin
+            echo ${{ secrets.GHCR_TOKEN }} | sudo docker login ghcr.io -u luctran12 --password-stdin
 
             # 4. Pull image mới nhất từ GHCR
-            docker pull $IMAGE_NAME
+            sudo docker pull $IMAGE_NAME
             
             # 5. Dừng container cũ
-            docker stop $CONTAINER_NAME || true
+            sudo docker stop $CONTAINER_NAME || true
             
             # 6. Xóa container cũ
-            docker rm $CONTAINER_NAME || true
+            sudo docker rm $CONTAINER_NAME || true
             
             # 7. Chạy container mới
             #    Nó sẽ dùng file .env trong thư mục hiện tại
-            docker run -d \
+            sudo docker run -d \
               --env-file .env \
               -p 8081:8081 \
               --restart always \
@@ -77,4 +77,4 @@ jobs:
               $IMAGE_NAME
               
             # 8. Dọn dẹp image cũ
-            docker image prune -f
+            sudo docker image prune -f
