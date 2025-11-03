@@ -2,6 +2,7 @@ package builder
 
 import (
 	"bytes"
+	_"embed"
 	"encoding/json"
 	"fmt"
 	"text/template"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"unicode"
+	
 )
 
 // func BuildExecutable(spec openapi.Spec) (string, error) {
@@ -101,6 +103,9 @@ import (
 // 	return outputPath, nil
 // }
 
+//go:embed templates/main_template.go.tmpl
+var templateContent string
+
 func BuildExecutable(spec openapi.Spec) (string, error) {
 	// ✅ Luôn lưu vào /tmp/builds
 	outputDir := filepath.Join(os.TempDir(), "builds")
@@ -120,7 +125,16 @@ func BuildExecutable(spec openapi.Spec) (string, error) {
 	outputPath := filepath.Join(outputDir, fmt.Sprintf("%s.exe", safeName))
 
 	// ✅ Load template
-	tmpl, err := template.ParseFiles("templates/main_template.go.tmpl")
+	// ex, err := os.Executable()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	//exPath := filepath.Dir(ex)
+	//templatePath := filepath.Join(exPath, "templates/main_template.go.tmpl")
+	tmpl, err := template.New("main").Parse(templateContent)
+
+
+	//tmpl, err := template.ParseFiles(templatePath)
 	if err != nil {
 		return "", fmt.Errorf("parse template failed: %w", err)
 	}

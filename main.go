@@ -16,7 +16,6 @@ import (
 func main() {
 	// Load config
 
-	
 
 	// Load database URL from environment
 	dbURL := os.Getenv("DATABASE_URL")
