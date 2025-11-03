@@ -21,7 +21,6 @@ RUN apk add --no-cache git ca-certificates build-base
 WORKDIR /app
 
 # copy binary server đã build
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/open-api-to-mcp-server /open-api-to-mcp-server
 
 
