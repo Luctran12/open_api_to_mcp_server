@@ -24,7 +24,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: luctran12 # github username in lowercase
           password: ${{ secrets.GITHUB_TOKEN }} # Token này được GitHub tự động cấp
 
       # 3. Build và đẩy Docker image
@@ -34,7 +34,7 @@ jobs:
           context: .
           push: true
           # Tên image sẽ là: ghcr.io/TEN_CUA_BAN/open-api-to-mcp-server:latest
-          tags: ghcr.io/${{ github.repository_owner }}/open-api-to-mcp-server:latest
+          tags: ghcr.io/luctran12/open-api-to-mcp-server:latest
 
       # 4. SSH vào VM Azure và thực hiện deploy
       - name: Deploy to Azure VM via SSH
@@ -49,14 +49,14 @@ jobs:
             cd /home/azureuser/open-api-to-mcp-server
             
             # 2. Đặt biến cho dễ quản lý
-            IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/open-api-to-mcp-server:latest"
+            IMAGE_NAME="ghcr.io/luctran12/open-api-to-mcp-server:latest"
             CONTAINER_NAME="open-api-to-mcp-server"
             
             # 3. Đăng nhập Docker vào GHCR (bắt buộc trên VM)
             #    (GITHUB_TOKEN cần được tạo và lưu trong secret tên là GHCR_TOKEN)
             #    LƯU Ý: Bạn cần tạo một Personal Access Token (classic) với quyền 'read:packages' 
             #    và lưu nó vào secret tên là GHCR_TOKEN
-            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u luctran12 --password-stdin
 
             # 4. Pull image mới nhất từ GHCR
             docker pull $IMAGE_NAME
