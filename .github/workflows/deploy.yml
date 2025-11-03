@@ -21,7 +21,7 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          ssh -i ~/.ssh/ci-cd-key -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             cd /home/azureuser/open-api-to-mcp-server
             git pull origin luc
             docker build -t open-api-to-mcp-server .
