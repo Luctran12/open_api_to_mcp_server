@@ -23,8 +23,6 @@ WORKDIR /app
 # copy binary server đã build
 COPY --from=base /app/server .
 
-# copy templates, nếu có
-COPY templates ./templates
 
 EXPOSE 8081
 CMD ["./server"]

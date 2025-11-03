@@ -162,7 +162,7 @@ func BuildExecutable(spec openapi.Spec) (string, error) {
 
 	// ✅ Build file .exe
 	cmd := exec.Command("go", "build", "-o", outputPath, mainPath)
-	cmd.Env = append(os.Environ(), "GOOS=windows", "GOARCH=amd64")
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0","GOOS=windows", "GOARCH=amd64")
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
