@@ -9,8 +9,7 @@ import (
 	"open_api_to_mcp_server/internal/middleware"
 	"os"
 	"path/filepath"
-
-	
+	"strings"
 )
 
 func main() {
@@ -70,11 +69,26 @@ func main() {
 	mux.Handle("/api/tools", middleware.Authenticate(config.DB)(http.HandlerFunc(toolHandler.GetTools)))
 	mux.Handle("/api/execute", middleware.Authenticate(config.DB)(http.HandlerFunc(executeHandler.Execute)))
 	mux.Handle("/api/build", middleware.Authenticate(config.DB)(http.HandlerFunc(executeHandler.Build)))
-	mux.Handle("/api/build/download/",
-	http.StripPrefix("/api/build/download/",
-		http.FileServer(http.Dir(filepath.Join(os.TempDir(), "builds"))),
-	),
-)
+// 	mux.Handle("/api/build/download/",
+// 	http.StripPrefix("/api/build/download/",
+// 		http.FileServer(http.Dir(filepath.Join(os.TempDir(), "builds"))),
+// 	),
+// )
+
+	mux.HandleFunc("/api/build/download/", func(w http.ResponseWriter, r *http.Request) {
+		file := strings.TrimPrefix(r.URL.Path, "/api/build/download/")
+		filePath := filepath.Join(os.TempDir(), "builds", file)
+
+		if _, err := os.Stat(filePath); err != nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		w.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(filePath))
+		w.Header().Set("Content-Type", "application/octet-stream")
+		http.ServeFile(w, r, filePath)
+})
+
 
 
 	// Apply global middleware
