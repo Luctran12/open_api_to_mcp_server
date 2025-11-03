@@ -106,73 +106,121 @@ import (
 //go:embed templates/main_template.go.tmpl
 var templateContent string
 
-func BuildExecutable(spec openapi.Spec) (string, error) {
-	// ✅ Luôn lưu vào /tmp/builds
-	outputDir := filepath.Join(os.TempDir(), "builds")
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create output dir: %w", err)
-	}
+// func BuildExecutable(spec openapi.Spec) (string, error) {
+// 	// ✅ Luôn lưu vào /tmp/builds
+// 	outputDir := filepath.Join(os.TempDir(), "builds")
+// 	if err := os.MkdirAll(outputDir, 0755); err != nil {
+// 		return "", fmt.Errorf("failed to create output dir: %w", err)
+// 	}
 
-	// ✅ Tên file an toàn
-	safeName := strings.Map(func(r rune) rune {
+// 	// ✅ Tên file an toàn
+// 	safeName := strings.Map(func(r rune) rune {
+// 		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' {
+// 			return r
+// 		}
+// 		return '_'
+// 	}, spec.Info.Title)
+
+// 	mainPath := filepath.Join(outputDir, fmt.Sprintf("%s_main.go", safeName))
+// 	outputPath := filepath.Join(outputDir, fmt.Sprintf("%s.exe", safeName))
+
+// 	// ✅ Load template
+// 	// ex, err := os.Executable()
+// 	// if err != nil {
+// 	// 	panic(err)
+// 	// }
+// 	//exPath := filepath.Dir(ex)
+// 	//templatePath := filepath.Join(exPath, "templates/main_template.go.tmpl")
+// 	tmpl, err := template.New("main").Parse(templateContent)
+
+
+// 	//tmpl, err := template.ParseFiles(templatePath)
+// 	if err != nil {
+// 		return "", fmt.Errorf("parse template failed: %w", err)
+// 	}
+
+// 	// ✅ Chuẩn bị JSON cho template
+// 	specJSON, err := json.Marshal(spec)
+// 	if err != nil {
+// 		return "", fmt.Errorf("marshal spec failed: %w", err)
+// 	}
+
+// 	// 👉 Dùng template.JS để không escape
+// 	data := map[string]any{
+// 		"SpecJSON": string(specJSON),
+// 	}
+
+// 	// ✅ Render template
+// 	var buf bytes.Buffer
+// 	if err := tmpl.Execute(&buf, data); err != nil {
+// 		return "", fmt.Errorf("execute template failed: %w", err)
+// 	}
+
+// 	if err := os.WriteFile(mainPath, buf.Bytes(), 0644); err != nil {
+// 		return "", fmt.Errorf("write main.go failed: %w", err)
+// 	}
+
+// 	// ✅ Build file .exe
+// 	cmd := exec.Command("go", "build","-mod=mod" ,"-o", outputPath, mainPath)
+// 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0","GOOS=windows", "GOARCH=amd64")
+
+
+
+// 	out, err := cmd.CombinedOutput()
+// 	if err != nil {
+// 		return "", fmt.Errorf("build failed: %v\n%s", err, string(out))
+// 	}
+
+// 	return outputPath, nil
+// }
+
+func sanitize(name string) string {
+	result := strings.Map(func(r rune) rune {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' {
 			return r
 		}
 		return '_'
-	}, spec.Info.Title)
+	}, name)
 
-	mainPath := filepath.Join(outputDir, fmt.Sprintf("%s_main.go", safeName))
-	outputPath := filepath.Join(outputDir, fmt.Sprintf("%s.exe", safeName))
-
-	// ✅ Load template
-	// ex, err := os.Executable()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	//exPath := filepath.Dir(ex)
-	//templatePath := filepath.Join(exPath, "templates/main_template.go.tmpl")
-	tmpl, err := template.New("main").Parse(templateContent)
-
-
-	//tmpl, err := template.ParseFiles(templatePath)
-	if err != nil {
-		return "", fmt.Errorf("parse template failed: %w", err)
+	// nếu rỗng → đặt tên mặc định
+	if result == "" {
+		return "output"
 	}
-
-	// ✅ Chuẩn bị JSON cho template
-	specJSON, err := json.Marshal(spec)
-	if err != nil {
-		return "", fmt.Errorf("marshal spec failed: %w", err)
-	}
-
-	// 👉 Dùng template.JS để không escape
-	data := map[string]any{
-		"SpecJSON": string(specJSON),
-	}
-
-	// ✅ Render template
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return "", fmt.Errorf("execute template failed: %w", err)
-	}
-
-	if err := os.WriteFile(mainPath, buf.Bytes(), 0644); err != nil {
-		return "", fmt.Errorf("write main.go failed: %w", err)
-	}
-
-	// ✅ Build file .exe
-	cmd := exec.Command("go", "build","-mod=mod" ,"-o", outputPath, mainPath)
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0","GOOS=windows", "GOARCH=amd64")
-
-
-
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("build failed: %v\n%s", err, string(out))
-	}
-
-	return outputPath, nil
+	return result
 }
 
 
+func BuildExecutable(spec openapi.Spec) (string, error) {
+    root, _ := os.Getwd() // thư mục nơi có go.mod
+
+    buildDir := filepath.Join(root, "internal", "builder", "tmp")
+    os.MkdirAll(buildDir, 0755)
+
+    safeName := sanitize(spec.Info.Title)
+    mainPath := filepath.Join(buildDir, "main.go")
+    outputPath := filepath.Join(buildDir, safeName+".exe")
+
+    // Parse template
+    tmpl, err := template.New("main").Parse(templateContent)
+    if err != nil { return "", err }
+
+    specJSON, _ := json.Marshal(spec)
+    data := map[string]any{"SpecJSON": string(specJSON)}
+
+    var buf bytes.Buffer
+    if err := tmpl.Execute(&buf, data); err != nil { return "", err }
+    os.WriteFile(mainPath, buf.Bytes(), 0644)
+
+    // ✅ Build từ module root
+    cmd := exec.Command("go", "build", "-o", outputPath, mainPath)
+    cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS=windows", "GOARCH=amd64")
+    cmd.Dir = root  
+
+    out, err := cmd.CombinedOutput()
+    if err != nil {
+        return "", fmt.Errorf("build failed: %v\n%s", err, string(out))
+    }
+
+    return outputPath, nil
+}
 
