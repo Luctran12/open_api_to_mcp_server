@@ -1,4 +1,4 @@
-FROM golang:1.24.5-alpine AS base
+FROM golang:1.24.5-alpine AS builder
 RUN apk add --no-cache git ca-certificates build-base
 
 WORKDIR /app
@@ -21,6 +21,7 @@ RUN apk add --no-cache git ca-certificates build-base
 WORKDIR /app
 
 # copy binary server đã build
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/open-api-to-mcp-server /open-api-to-mcp-server
 
 
