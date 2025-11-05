@@ -35,6 +35,7 @@ func (s *HTTPServer) Start() error {
 	http.HandleFunc("/mcp", s.handleMCP)
 	http.HandleFunc("/upload", s.handleUpload)
 	http.HandleFunc("/health", s.handleHealth)
+	http.HandleFunc("/api/build", s.executeHandler.Build)
 	http.HandleFunc("/api/build/download/", s.executeHandler.Download)
 
 	fmt.Printf("🚀 Starting HTTP server on %s ...\n", s.config.Server.HTTPPort)
