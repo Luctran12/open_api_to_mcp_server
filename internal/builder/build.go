@@ -222,8 +222,40 @@ func BuildExecutable(spec openapi.Spec) (string, error) {
 		return "", fmt.Errorf("failed to write main.go: %w", err)
 	}
 
-	// 3. Build executable
-	cmd := exec.Command("go", "build", "-o", outputPath, mainPath)
+	// 3. Initialize go module in temp directory
+	cmd := exec.Command("go", "mod", "init", "temp-build")
+	cmd.Dir = buildDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("go mod init failed: %v\n%s", err, string(out))
+	}
+
+	// Get project root
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	// Add replace directive to go.mod
+	goModPath := filepath.Join(buildDir, "go.mod")
+	f, err := os.OpenFile(goModPath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return "", fmt.Errorf("failed to open go.mod: %w", err)
+	}
+	defer f.Close()
+
+	replaceDirective := fmt.Sprintf("\nreplace open_api_to_mcp_server => %s\n", wd)
+	if _, err := f.WriteString(replaceDirective); err != nil {
+		return "", fmt.Errorf("failed to write replace directive: %w", err)
+	}
+
+	cmd = exec.Command("go", "mod", "tidy")
+	cmd.Dir = buildDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("go mod tidy failed: %v\n%s", err, string(out))
+	}
+
+	// 4. Build executable
+	cmd = exec.Command("go", "build", "-o", outputPath, mainPath)
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS=linux", "GOARCH=amd64")
 	cmd.Dir = buildDir // Chạy go build từ trong thư mục tạm
 
@@ -232,7 +264,7 @@ func BuildExecutable(spec openapi.Spec) (string, error) {
 		return "", fmt.Errorf("build failed: %v\n%s", err, string(out))
 	}
 
-	// 4. Trả về đường dẫn đầy đủ
+	// 5. Trả về đường dẫn đầy đủ
 	return outputPath, nil
 }
 
