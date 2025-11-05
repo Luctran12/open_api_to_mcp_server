@@ -1,24 +1,17 @@
-// cmd/server/main.go
 package main
 
 import (
 	"log"
-	"net/http"
-	"open_api_to_mcp_server/internal/config"
-	"open_api_to_mcp_server/internal/handler"
-	"open_api_to_mcp_server/internal/middleware"
 	"os"
-	"path/filepath"
-	"strings"
+
+	iconfig "open_api_to_mcp_server/internal/config"
+	"open_api_to_mcp_server/pkg/config"
+	"open_api_to_mcp_server/pkg/server"
 )
 
 func main() {
-	// create place for build files
-	buildDir := filepath.Join(os.TempDir(), "builds")
-	if err := os.MkdirAll(buildDir, 0755); err != nil {
-        log.Fatalf("Failed to create build directory: %v", err)
-    }
-
+	// Load config
+	cfg := config.Load()
 
 	// Load database URL from environment
 	dbURL := os.Getenv("DATABASE_URL")
@@ -28,80 +21,19 @@ func main() {
 	}
 
 	// Connect to database
-	if err := config.InitDB(); err != nil {
+	if err := iconfig.InitDB(); err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
-	defer config.CloseDB()
+	defer iconfig.CloseDB()
 
-	// Initialize handlers
-	authHandler := handler.NewAuthHandler(config.DB)
-	specHandler := handler.NewSpecHandler(config.DB)
-	toolHandler := handler.NewToolHandler(config.DB)
-	executeHandler := handler.NewExecuteHandler(config.DB)
-
-	// Setup router
-	mux := http.NewServeMux()
-
-	//api for connection test
-	mux.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("bay bong"))
-	})
-
-	// Public routes
-	mux.HandleFunc("/api/auth/register", authHandler.Register)
-	mux.HandleFunc("/api/auth/login", authHandler.Login)
-
-	mux.HandleFunc("/api/developers", authHandler.GetAllDevelopers)
-
-	// Protected routes (require authentication)
-	mux.Handle("/api/specs", middleware.Authenticate(config.DB)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "POST":
-			specHandler.UploadSpec(w, r)
-		case "GET":
-			specHandler.ListSpecs(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})))
-
-	mux.Handle("/api/tools", middleware.Authenticate(config.DB)(http.HandlerFunc(toolHandler.GetTools)))
-	mux.Handle("/api/execute", middleware.Authenticate(config.DB)(http.HandlerFunc(executeHandler.Execute)))
-	mux.Handle("/api/build", middleware.Authenticate(config.DB)(http.HandlerFunc(executeHandler.Build)))
-// 	mux.Handle("/api/build/download/",
-// 	http.StripPrefix("/api/build/download/",
-// 		http.FileServer(http.Dir(filepath.Join(os.TempDir(), "builds"))),
-// 	),
-// )
-
-	mux.HandleFunc("/api/build/download/", func(w http.ResponseWriter, r *http.Request) {
-		file := strings.TrimPrefix(r.URL.Path, "/api/build/download/")
-		filePath := filepath.Join(os.TempDir(), "builds", file)
-
-		if _, err := os.Stat(filePath); err != nil {
-			http.NotFound(w, r)
-			return
-		}
-		log.Println("📂 Serving from:", filePath)
-
-		w.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(filePath))
-		w.Header().Set("Content-Type", "application/octet-stream")
-		http.ServeFile(w, r, filePath)
-})
-
-
-
-	// Apply global middleware
-	handler := middleware.CORS(mux)
-	handler = middleware.Logging(handler)
-
-	// Start server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8081"
+	// Create a new server
+	srv, err := server.New(cfg)
+	if err != nil {
+		log.Fatalf("Failed to create server: %v", err)
 	}
 
-	log.Printf("🚀 Server starting on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, handler))
+	// Start the server
+	if err := srv.Start(); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }

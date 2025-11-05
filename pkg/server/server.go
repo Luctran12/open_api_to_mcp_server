@@ -2,9 +2,11 @@ package server
 
 import (
 	"fmt"
+	"open_api_to_mcp_server/internal/handler"
 	"os"
 
 	"open_api_to_mcp_server/pkg/config"
+	iconfig "open_api_to_mcp_server/internal/config"
 
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -25,7 +27,8 @@ func New(cfg *config.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to load initial tools: %w", err)
 	}
 
-	httpServer := NewHTTPServer(mcpServer, cfg)
+	executeHandler := handler.NewExecuteHandler(iconfig.DB)
+	httpServer := NewHTTPServer(mcpServer, cfg, executeHandler)
 
 	return &Server{
 		mcpServer:  mcpServer,

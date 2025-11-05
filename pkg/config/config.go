@@ -34,7 +34,7 @@ func Load() *Config {
 		Server: ServerConfig{
 			Name:       getEnv("SERVER_NAME", "openapi-client"),
 			Version:    getEnv("SERVER_VERSION", "1.0.0"),
-			HTTPPort:   getEnv("HTTP_PORT", ":8080"),
+			HTTPPort:   getEnv("HTTP_PORT", ":8081"),
 			HTTPTimeout: 30 * time.Second,
 		},
 		Auth: AuthConfig{

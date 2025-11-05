@@ -191,37 +191,48 @@ func sanitize(name string) string {
 
 
 func BuildExecutable(spec openapi.Spec) (string, error) {
-    root, _ := os.Getwd() // thư mục nơi có go.mod
+	// 1. Tạo thư mục tạm cho mỗi lần build
+	buildDir, err := os.MkdirTemp("", "openapi-build-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp dir: %w", err)
+	}
+	log.Println("build dir: ", buildDir)
+	// 2. Sinh file main.go
+	safeName := sanitize(spec.Info.Title)
+	mainPath := filepath.Join(buildDir, "main.go")
+	outputPath := filepath.Join(buildDir, safeName)
 
-    buildDir := filepath.Join(root, "internal", "builder", "tmp")
-    os.MkdirAll(buildDir, 0755)
+	tmpl, err := template.New("main").Parse(templateContent)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse template: %w", err)
+	}
 
-    safeName := sanitize(spec.Info.Title)
-    mainPath := filepath.Join(buildDir, "main.go")
-    outputPath := filepath.Join(buildDir, safeName+".exe")
+	specJSON, err := json.Marshal(spec)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal spec: %w", err)
+	}
 
-    // Parse template
-    tmpl, err := template.New("main").Parse(templateContent)
-    if err != nil { return "", err }
+	data := map[string]any{"SpecJSON": string(specJSON)}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to execute template: %w", err)
+	}
 
-    specJSON, _ := json.Marshal(spec)
-    data := map[string]any{"SpecJSON": string(specJSON)}
+	if err := os.WriteFile(mainPath, buf.Bytes(), 0644); err != nil {
+		return "", fmt.Errorf("failed to write main.go: %w", err)
+	}
 
-    var buf bytes.Buffer
-    if err := tmpl.Execute(&buf, data); err != nil { return "", err }
-    os.WriteFile(mainPath, buf.Bytes(), 0644)
+	// 3. Build executable
+	cmd := exec.Command("go", "build", "-o", outputPath, mainPath)
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS=linux", "GOARCH=amd64")
+	cmd.Dir = buildDir // Chạy go build từ trong thư mục tạm
 
-    // ✅ Build từ module root
-    cmd := exec.Command("go", "build", "-o", outputPath, mainPath)
-	log.Println("out put path: ", outputPath)
-    cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS=windows", "GOARCH=amd64")
-    cmd.Dir = root  
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("build failed: %v\n%s", err, string(out))
+	}
 
-    out, err := cmd.CombinedOutput()
-    if err != nil {
-        return "", fmt.Errorf("build failed: %v\n%s", err, string(out))
-    }
-
-    return outputPath, nil
+	// 4. Trả về đường dẫn đầy đủ
+	return outputPath, nil
 }
 

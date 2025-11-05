@@ -158,6 +158,49 @@ func (h *ExecuteHandler) Build(w http.ResponseWriter, r *http.Request) {
 	
 }
 
+func (h *ExecuteHandler) Download(w http.ResponseWriter, r *http.Request) {
+	fileName := filepath.Base(r.URL.Path)
+	if fileName == "" {
+		utils.SendError(w, 400, "File name not provided")
+		return
+	}
+
+	// An toàn: chỉ cho phép tên file đơn giản
+	safeFileName := filepath.Base(fileName) // chỉ lấy phần tên file
+
+	// Đường dẫn đầy đủ tới file trong thư mục tạm của hệ điều hành
+	filePath := filepath.Join(os.TempDir(), safeFileName)
+
+	// Kiểm tra xem file có tồn tại không
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		// Thử tìm trong các thư mục con của TempDir (vì MkdirTemp tạo thư mục ngẫu nhiên)
+		found := false
+		walkErr := filepath.Walk(os.TempDir(), func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() && info.Name() == safeFileName {
+				filePath = path
+				found = true
+				return filepath.SkipDir // Dừng tìm kiếm khi đã thấy
+			}
+			return nil
+		})
+
+		if walkErr != nil || !found {
+			utils.SendError(w, 404, fmt.Sprintf("File not found: %s", safeFileName))
+			return
+		}
+	}
+
+	// Set header để trình duyệt tải file về
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+safeFileName+"\"")
+	w.Header().Set("Content-Type", "application/octet-stream")
+
+	// Serve file
+	http.ServeFile(w, r, filePath)
+}
+
 func MakeHandler(method, urlPath string, requiresAuth bool) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Validate input method

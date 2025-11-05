@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"open_api_to_mcp_server/internal/handler"
 	"open_api_to_mcp_server/pkg/config"
 	"os"
 
@@ -16,14 +17,16 @@ type HTTPServer struct {
 	mcpServer *MCPServer
 	config    *config.Config
 	specPath  string
+	executeHandler *handler.ExecuteHandler
 }
 
 // NewHTTPServer creates a new HTTP server
-func NewHTTPServer(mcpServer *MCPServer, cfg *config.Config) *HTTPServer {
+func NewHTTPServer(mcpServer *MCPServer, cfg *config.Config, executeHandler *handler.ExecuteHandler) *HTTPServer {
 	return &HTTPServer{
 		mcpServer: mcpServer,
 		config:    cfg,
 		specPath:  cfg.OpenAPI.SpecPath,
+		executeHandler: executeHandler,
 	}
 }
 
@@ -32,6 +35,7 @@ func (s *HTTPServer) Start() error {
 	http.HandleFunc("/mcp", s.handleMCP)
 	http.HandleFunc("/upload", s.handleUpload)
 	http.HandleFunc("/health", s.handleHealth)
+	http.HandleFunc("/api/build/download/", s.executeHandler.Download)
 
 	fmt.Printf("🚀 Starting HTTP server on %s ...\n", s.config.Server.HTTPPort)
 	return http.ListenAndServe(s.config.Server.HTTPPort, nil)
