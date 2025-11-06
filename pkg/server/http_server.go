@@ -5,43 +5,93 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"open_api_to_mcp_server/internal/database"
 	"open_api_to_mcp_server/internal/handler"
+	"open_api_to_mcp_server/internal/middleware"
 	"open_api_to_mcp_server/pkg/config"
 	"os"
 
 	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/swaggo/http-swagger"
+	_ "open_api_to_mcp_server/docs"
 )
 
+// @title MCP Server API
+// @version 1.0
+// @description Simple HTTP server exposing MCP endpoints
+// @BasePath /
+// @host localhost:8081
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
+// @description Provide your API key here to access the endpoints
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Enter your Bearer token in the format: Bearer <token>
 // HTTPServer handles HTTP endpoints for MCP and spec upload
 type HTTPServer struct {
-	mcpServer *MCPServer
-	config    *config.Config
-	specPath  string
+	mcpServer      *MCPServer
+	config         *config.Config
+	specPath       string
 	executeHandler *handler.ExecuteHandler
+	authHandler    *handler.AuthHandler
+	httpHandler    *handler.HTTPHandler
+	specHandler    *handler.SpecHandler
+	toolHandler    *handler.ToolHandler
+	db             *database.DB
 }
 
 // NewHTTPServer creates a new HTTP server
-func NewHTTPServer(mcpServer *MCPServer, cfg *config.Config, executeHandler *handler.ExecuteHandler) *HTTPServer {
+func NewHTTPServer(mcpServer *MCPServer, cfg *config.Config, executeHandler *handler.ExecuteHandler, authHandler *handler.AuthHandler,
+	httpHandler *handler.HTTPHandler,
+	specHandler *handler.SpecHandler,
+	toolHandler *handler.ToolHandler,
+	db *database.DB) *HTTPServer {
 	return &HTTPServer{
-		mcpServer: mcpServer,
-		config:    cfg,
-		specPath:  cfg.OpenAPI.SpecPath,
+		mcpServer:      mcpServer,
+		config:         cfg,
+		specPath:       cfg.OpenAPI.SpecPath,
 		executeHandler: executeHandler,
+		authHandler:    authHandler,
+		httpHandler:    httpHandler,
+		specHandler:    specHandler,
+		toolHandler:    toolHandler,
+		db:             db,
 	}
 }
 
 // Start starts the HTTP server
 func (s *HTTPServer) Start() error {
+	//init handlers
+	authMiddleware := middleware.Authenticate(s.db)
+
+	// add swagger route
+	http.Handle("/swagger/", httpSwagger.WrapHandler)
 	http.HandleFunc("/mcp", s.handleMCP)
-	http.HandleFunc("/upload", s.handleUpload)
+	http.Handle("/api/execute", authMiddleware(http.HandlerFunc(s.executeHandler.Execute)))
+	http.Handle("/upload", authMiddleware(http.HandlerFunc(s.specHandler.UploadSpec)))
 	http.HandleFunc("/health", s.handleHealth)
-	http.HandleFunc("/api/build", s.executeHandler.Build)
-	http.HandleFunc("/api/build/download/", s.executeHandler.Download)
+	http.Handle("/api/build", authMiddleware(http.HandlerFunc(s.executeHandler.Build)))
+	http.Handle("/api/build/download/", authMiddleware(http.HandlerFunc(s.executeHandler.Download)))
 
 	fmt.Printf("🚀 Starting HTTP server on %s ...\n", s.config.Server.HTTPPort)
 	return http.ListenAndServe(s.config.Server.HTTPPort, nil)
 }
 
+// handleMCP godoc
+// @Summary Handle MCP tool call
+// @Description Process MCP CallToolRequest and route to correct handler
+// @Accept json
+// @Produce json
+// @Param request body server.CallToolRequestExample true "MCP Request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {string} string "Invalid request"
+// @Failure 404 {string} string "Tool not found"
+// @Router /mcp [post]
 func (s *HTTPServer) handleMCP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -71,6 +121,14 @@ func (s *HTTPServer) handleMCP(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(result)
 }
 
+// handleUpload godoc
+// @Summary Upload OpenAPI spec
+// @Description Upload new OpenAPI spec file and reload tools
+// @Accept multipart/form-data
+// @Param spec formData file true "OpenAPI spec file"
+// @Success 200 {string} string "Upload successful"
+// @Failure 400 {string} string "Bad request"
+// @Router /upload [post]
 func (s *HTTPServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -105,6 +163,12 @@ func (s *HTTPServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Spec uploaded and tools updated successfully"))
 }
 
+// handleHealth godoc
+// @Summary Health check
+// @Description Return server status and version
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /health [get]
 func (s *HTTPServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{

@@ -2,10 +2,12 @@ package server
 
 import (
 	"fmt"
+	"open_api_to_mcp_server/internal/database"
 	"open_api_to_mcp_server/internal/handler"
 	"os"
 
 	"open_api_to_mcp_server/pkg/config"
+
 	iconfig "open_api_to_mcp_server/internal/config"
 
 	"github.com/mark3labs/mcp-go/server"
@@ -16,10 +18,11 @@ type Server struct {
 	mcpServer  *MCPServer
 	httpServer *HTTPServer
 	config     *config.Config
+	db         *database.DB
 }
 
 // New creates a new server instance
-func New(cfg *config.Config) (*Server, error) {
+func New(cfg *config.Config, db *database.DB) (*Server, error) {
 	mcpServer := NewMCPServer(cfg)
 
 	// Load initial tools
@@ -28,12 +31,17 @@ func New(cfg *config.Config) (*Server, error) {
 	}
 
 	executeHandler := handler.NewExecuteHandler(iconfig.DB)
-	httpServer := NewHTTPServer(mcpServer, cfg, executeHandler)
+	authHandler := handler.NewAuthHandler(iconfig.DB)
+	httpHandler := handler.NewHTTPHandler(&cfg.Auth)
+	specHandler := handler.NewSpecHandler(iconfig.DB)
+	toolHandler := handler.NewToolHandler(iconfig.DB)
+	httpServer := NewHTTPServer(mcpServer, cfg, executeHandler, authHandler, httpHandler, specHandler, toolHandler, db)
 
 	return &Server{
 		mcpServer:  mcpServer,
 		httpServer: httpServer,
 		config:     cfg,
+		db:         db,
 	}, nil
 }
 

@@ -29,6 +29,17 @@ type BuildRequest struct {
 	SpecID string `json:"spec_id"`
 }
 
+type request struct {
+	ToolName  string                 `json:"tool_name"`
+	Arguments map[string]interface{} `json:"arguments"`
+}
+
+// type response struct {
+// 	Success bool        `json:"success"`
+// 	Data    *mcp.CallToolResult `json:"data,omitempty"`
+// 	Meta   utils.Meta      `json:"meta,omitempty"`
+// }
+
 // urlValues là type alias để làm việc với URL parameters
 type urlValues url.Values
 
@@ -47,6 +58,18 @@ func NewExecuteHandler(db *database.DB) *ExecuteHandler {
 }
 
 // POST /api/execute
+// handleMCP godoc
+// @Summary Handle MCP tool call
+// @Description Process MCP CallToolRequest and route to correct handler
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Security BearerAuth
+// @Param request body request true "MCP Request"
+// @Success 200 {object} utils.Response 
+// @Failure 400 {string} string "Invalid request"
+// @Failure 404 {string} string "Tool not found"
+// @Router /api/execute [post]
 func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	developer := r.Context().Value("developer").(*database.Developer)
 
@@ -60,10 +83,11 @@ func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request
-	var req struct {
-		ToolName  string                 `json:"tool_name"`
-		Arguments map[string]interface{} `json:"arguments"`
-	}
+	// var req struct {
+	// 	ToolName  string                 `json:"tool_name"`
+	// 	Arguments map[string]interface{} `json:"arguments"`
+	// }
+	req := request{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		utils.SendError(w, 400, "Invalid request body")
 		return
@@ -71,7 +95,7 @@ func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 
 	// Load tool from database
 	tool, err := h.db.GetTool(developer.ID, req.ToolName)
-	if err != nil {
+	if err != nil || tool == nil {
 		utils.SendError(w, 404, "Tool not found")
 		return
 	}
