@@ -58,3 +58,60 @@ These changes ensure that:
 *   The server starts on an available port.
 
 The `api/build` endpoint should now correctly generate and allow the download of executable files without encountering "404 Not Found" errors.
+
+---
+
+# Bug Fix Report: Authentication Middleware Missing on Endpoints
+
+## Issue
+
+The API endpoints `/upload`, `/api/execute`, `/api/build`, and `/api/build/download` would cause the server to panic with the error `interface conversion: interface {} is nil, not *database.Developer`.
+
+## Root Cause Analysis
+
+The handlers for these endpoints all expect a `*database.Developer` object to be present in the request's context. This object is added to the context by an authentication middleware. The panic occurred because these endpoints were being registered without the authentication middleware, so the "developer" value in the context was `nil`.
+
+## Resolution
+
+The following changes were implemented to address the issue:
+
+1.  **`pkg/server/http_server.go` and `pkg/server/server.go` Modifications:**
+    *   The `*database.DB` instance, which is required by the authentication middleware, was made available to the `HTTPServer`.
+    *   The `HTTPServer` struct was updated to include a `db` field.
+    *   The `NewHTTPServer` function was updated to accept the `db` instance.
+    *   The `New` function in `pkg/server/server.go` was updated to pass the `db` instance when creating the `HTTPServer`.
+
+2.  **`pkg/server/http_server.go` Middleware Application:**
+    *   The `Authenticate` middleware was applied to the `/upload`, `/api/execute`, `/api/build`, and `/api/build/download/` routes.
+    *   The `http.HandleFunc` calls for these routes were changed to `http.Handle` to properly apply the middleware.
+
+## Conclusion
+
+These changes ensure that all endpoints requiring authentication are now correctly protected by the `Authenticate` middleware. This resolves the panic by guaranteeing that a valid `*database.Developer` object is available in the request context for these handlers.
+
+---
+
+# Bug Fix Report: Nil Pointer Dereference in ExecuteHandler when Tool Not Found
+
+## Problem
+
+When a request is made to the `/api/execute` endpoint with a `tool_name` that does not exist in the database, the `Execute` function in `internal/handler/execute_handler.go` panics with a `runtime error: invalid memory address or nil pointer dereference`.
+
+## Root Cause
+
+The `h.db.GetTool` function in `internal/database/postgres.go` returns `(nil, nil)` when a tool with the given `developerID` and `toolName` is not found. The `Execute` function only checks for a non-nil error (`if err != nil`) but does not explicitly check if the returned `tool` object is `nil`. Consequently, when `tool` is `nil`, subsequent access to `tool.Method`, `tool.URLPath`, or `tool.RequiresAuth` leads to a nil pointer dereference.
+
+## Fix
+
+Modified the `Execute` function in `internal/handler/execute_handler.go` to explicitly check if the `tool` object returned by `h.db.GetTool` is `nil`. The condition `if err != nil` was changed to `if err != nil || tool == nil` to ensure that if the tool is not found (and thus `tool` is `nil`), an appropriate 404 error is returned, preventing the panic.
+
+## Code Change (`internal/handler/execute_handler.go`)
+
+```go
+	// Load tool from database
+	tool, err := h.db.GetTool(developer.ID, req.ToolName)
+	if err != nil || tool == nil { // Added tool == nil check
+		utils.SendError(w, 404, "Tool not found")
+		return
+	}
+```

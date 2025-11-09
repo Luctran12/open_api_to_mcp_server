@@ -7,12 +7,18 @@ import (
 	iconfig "open_api_to_mcp_server/internal/config"
 	"open_api_to_mcp_server/pkg/config"
 	"open_api_to_mcp_server/pkg/server"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load config
 	cfg := config.Load()
 
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found, proceeding with environment variables")
+	}
 	// Load database URL from environment
 	dbURL := os.Getenv("DATABASE_URL")
 	log.Println("DATABASE_URL:", dbURL)
@@ -27,7 +33,7 @@ func main() {
 	defer iconfig.CloseDB()
 
 	// Create a new server
-	srv, err := server.New(cfg)
+	srv, err := server.New(cfg, iconfig.DB)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}

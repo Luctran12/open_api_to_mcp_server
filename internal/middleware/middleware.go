@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"open_api_to_mcp_server/internal/database"
+	"open_api_to_mcp_server/pkg/utils"
 	"strings"
 	"time"
 )
@@ -48,7 +49,7 @@ func Authenticate(db *database.DB) func(http.Handler) http.Handler {
 			apiKey := strings.TrimSpace(r.Header.Get("X-API-Key"))
             log.Println(apiKey)
 			if apiKey == "" {
-				http.Error(w, `{"error": "X-API-Key header required"}`, http.StatusUnauthorized)
+				utils.SendError(w, http.StatusUnauthorized, "invalid API KEY")
 				return
 			}
 
@@ -62,7 +63,7 @@ func Authenticate(db *database.DB) func(http.Handler) http.Handler {
             log.Println(apiKey)
 			if err != nil {
 				log.Println("Invalid API key:", err)
-				http.Error(w, `{"error": "Invalid API key"}`, http.StatusUnauthorized)
+				utils.SendError(w, http.StatusUnauthorized, "invalid API KEY")
 				return
 			}
 
