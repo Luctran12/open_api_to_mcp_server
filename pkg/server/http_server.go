@@ -66,20 +66,30 @@ func NewHTTPServer(mcpServer *MCPServer, cfg *config.Config, executeHandler *han
 
 // Start starts the HTTP server
 func (s *HTTPServer) Start() error {
-	//init handlers
+	//init HTTP routes
+	mux := http.NewServeMux()
+	
+	//init middlewares
 	authMiddleware := middleware.Authenticate(s.db)
+	
+	//chaining middlewares
+	chainMiddleware := middleware.ChainMiddleware(mux,
+		middleware.CORS,
+		middleware.Logging,
+	)
+	
 
 	// add swagger route
-	http.Handle("/swagger/", httpSwagger.WrapHandler)
-	http.HandleFunc("/mcp", s.handleMCP)
-	http.Handle("/api/execute", authMiddleware(http.HandlerFunc(s.executeHandler.Execute)))
-	http.Handle("/upload", authMiddleware(http.HandlerFunc(s.specHandler.UploadSpec)))
-	http.HandleFunc("/health", s.handleHealth)
-	http.Handle("/api/build", authMiddleware(http.HandlerFunc(s.executeHandler.Build)))
-	http.Handle("/api/build/download/", authMiddleware(http.HandlerFunc(s.executeHandler.Download)))
+	mux.Handle("/swagger/", httpSwagger.WrapHandler)
+	mux.HandleFunc("/mcp", s.handleMCP)
+	mux.Handle("/api/execute", authMiddleware(http.HandlerFunc(s.executeHandler.Execute)))
+	mux.Handle("/upload", authMiddleware(http.HandlerFunc(s.specHandler.UploadSpec)))
+	mux.HandleFunc("/health", s.handleHealth)
+	mux.Handle("/api/build", authMiddleware(http.HandlerFunc(s.executeHandler.Build)))
+	mux.Handle("/api/build/download/", authMiddleware(http.HandlerFunc(s.executeHandler.Download)))
 
 	fmt.Printf("🚀 Starting HTTP server on %s ...\n", s.config.Server.HTTPPort)
-	return http.ListenAndServe(s.config.Server.HTTPPort, nil)
+	return http.ListenAndServe(s.config.Server.HTTPPort, chainMiddleware)
 }
 
 // handleMCP godoc

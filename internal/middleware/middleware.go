@@ -3,6 +3,9 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
+	"os"
+
 	// "crypto/sha256"
 	// "encoding/hex"
 	"log"
@@ -11,7 +14,12 @@ import (
 	"open_api_to_mcp_server/pkg/utils"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+// define Middleware type
+type Middleware func(http.Handler) http.Handler
 
 // CORS Middleware
 func CORS(next http.Handler) http.Handler {
@@ -29,17 +37,76 @@ func CORS(next http.Handler) http.Handler {
 	})
 }
 
-// Logging Middleware
+// Logging Middleware - Ghi log chi tiết các yêu cầu HTTP dưới dạng JSON vào file log.json
 func Logging(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // Tạo Request ID nếu chưa có (giúp dễ dàng truy vấn log)
+        requestID := r.Header.Get("X-Request-ID")
+        if requestID == "" {
+            requestID = uuid.New().String() // Tạo một Request ID mới nếu không có
+        }
 
-		log.Printf("[%s] %s %s", r.Method, r.URL.Path, r.RemoteAddr)
+        // Tính toán thời gian xử lý
+        start := time.Now()
 
-		next.ServeHTTP(w, r)
+        // Thêm một wrapper để ghi lại mã trạng thái HTTP và nội dung đã gửi trả
+        rw := &responseWriter{w, http.StatusOK}
 
-		log.Printf("Completed in %v", time.Since(start))
-	})
+        // Tiến hành xử lý yêu cầu tiếp theo trong middleware chain
+        next.ServeHTTP(rw, r)
+
+        // Tạo một log object với thông tin cần ghi
+        logEntry := struct {
+            RequestID    string `json:"request_id"`
+            Method       string `json:"method"`
+            URL          string `json:"url"`
+            ClientIP     string `json:"client_ip"`
+            UserAgent    string `json:"user_agent"`
+            Referer      string `json:"referer"`
+            StatusCode   int    `json:"status_code"`
+            ResponseTime string `json:"response_time"`
+        }{
+            RequestID:    requestID,
+            Method:       r.Method,
+            URL:          r.URL.Path,
+            ClientIP:     r.RemoteAddr,
+            UserAgent:    r.UserAgent(),
+            Referer:      r.Referer(),
+            StatusCode:   rw.statusCode,
+            ResponseTime: time.Since(start).String(),
+        }
+
+        // Mở hoặc tạo file log.json để ghi log
+        file, err := os.OpenFile("log.json", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+        if err != nil {
+            log.Fatalf("Could not open log file: %v", err)
+        }
+        defer file.Close()
+
+        // Chuyển log entry thành JSON
+        logData, err := json.Marshal(logEntry)
+        if err != nil {
+            log.Printf("Error marshaling log entry: %v", err)
+            return
+        }
+
+        // Ghi log dưới dạng JSON vào file log.json
+        file.Write(logData)
+        file.Write([]byte("\n")) // Thêm dòng mới sau mỗi log
+    })
+}
+
+// responseWriter là một wrapper để giữ mã trạng thái HTTP
+// vì http.ResponseWriter không cho phép lấy mã trạng thái trực tiếp.
+type responseWriter struct {
+    http.ResponseWriter
+    statusCode int
+}
+
+// Overwrite WriteHeader để ghi lại mã trạng thái HTTP
+func (rw *responseWriter) WriteHeader(code int) {
+    rw.statusCode = code
+    rw.ResponseWriter.WriteHeader(code)
 }
 
 // Authentication Middleware
@@ -78,4 +145,11 @@ func Authenticate(db *database.DB) func(http.Handler) http.Handler {
 func RateLimit(next http.Handler) http.Handler {
 	// TODO: Implement with Redis
 	return next
+}
+
+func ChainMiddleware(h http.Handler, middlewares ...Middleware) http.Handler {
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		h = middlewares[i](h)
+	}
+	return h
 }
