@@ -52,15 +52,21 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid request",
+                        "description": "Bad Request",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/handler.responseEror"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.responseEror"
                         }
                     },
                     "404": {
-                        "description": "Tool not found",
+                        "description": "Not Found",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/handler.responseEror"
                         }
                     }
                 }
@@ -173,6 +179,20 @@ const docTemplate = `{
                 },
                 "tool_name": {
                     "type": "string"
+                }
+            }
+        },
+        "handler.responseEror": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },

@@ -34,11 +34,10 @@ type request struct {
 	Arguments map[string]interface{} `json:"arguments"`
 }
 
-// type response struct {
-// 	Success bool        `json:"success"`
-// 	Data    *mcp.CallToolResult `json:"data,omitempty"`
-// 	Meta   utils.Meta      `json:"meta,omitempty"`
-// }
+type responseEror struct {
+	Success bool        `json:"success"`
+	Eror string	  `json:"error"`
+}
 
 // urlValues là type alias để làm việc với URL parameters
 type urlValues url.Values
@@ -67,8 +66,9 @@ func NewExecuteHandler(db *database.DB) *ExecuteHandler {
 // @Security BearerAuth
 // @Param request body request true "MCP Request"
 // @Success 200 {object} utils.Response 
-// @Failure 400 {string} string "Invalid request"
-// @Failure 404 {string} string "Tool not found"
+// @Failure 401 {object} responseEror
+// @Failure 400 {object} responseEror
+// @Failure 404 {object} responseEror
 // @Router /api/execute [post]
 func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	developer := r.Context().Value("developer").(*database.Developer)
@@ -89,6 +89,7 @@ func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	// }
 	req := request{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		
 		utils.SendError(w, 400, "Invalid request body")
 		return
 	}

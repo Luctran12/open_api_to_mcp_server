@@ -8,6 +8,15 @@ definitions:
       tool_name:
         type: string
     type: object
+  handler.responseEror:
+    properties:
+      error:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+    type: object
   server.CallToolRequestExample:
     properties:
       name:
@@ -61,13 +70,17 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
         "400":
-          description: Invalid request
+          description: Bad Request
           schema:
-            type: string
+            $ref: '#/definitions/handler.responseEror'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.responseEror'
         "404":
-          description: Tool not found
+          description: Not Found
           schema:
-            type: string
+            $ref: '#/definitions/handler.responseEror'
       security:
       - ApiKeyAuth: []
       - BearerAuth: []
