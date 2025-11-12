@@ -5,16 +5,18 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 
 	// "crypto/sha256"
 	// "encoding/hex"
 	"log"
 	"net/http"
+	"open_api_to_mcp_server/internal/auth"
 	"open_api_to_mcp_server/internal/database"
 	"open_api_to_mcp_server/pkg/utils"
-	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )
 
@@ -24,18 +26,30 @@ type Middleware func(http.Handler) http.Handler
 // CORS Middleware
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+		if origin != "" {
+			// Đảm bảo rằng giá trị của "Access-Control-Allow-Origin" khớp với giá trị "Origin" trong yêu cầu
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		} else {
+			// Nếu không có Origin trong header, cho phép tất cả nguồn gốc (chỉ dùng khi thật sự cần thiết)
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		}
+		
+		// Các header khác cần cho CORS
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization")
 
+		// Kiểm tra nếu là yêu cầu OPTIONS (preflight request)
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
 
+		// Nếu không phải OPTIONS, gọi hàm xử lý tiếp theo
 		next.ServeHTTP(w, r)
 	})
 }
+
 
 // Logging Middleware - Ghi log chi tiết các yêu cầu HTTP dưới dạng JSON vào file log.json
 func Logging(next http.Handler) http.Handler {
@@ -110,11 +124,27 @@ func (rw *responseWriter) WriteHeader(code int) {
 }
 
 // Authentication Middleware
-func Authenticate(db *database.DB) func(http.Handler) http.Handler {
+func Authenticate(db *database.DB, secretKey []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			apiKey := strings.TrimSpace(r.Header.Get("X-API-Key"))
-            log.Println(apiKey)
+			//get jwt from header
+			tokenStr := r.Header.Get("Authorization")
+			if tokenStr == "" {
+				utils.SendError(w, http.StatusUnauthorized, "missing Authorization header")
+				return
+			}
+			//validate token
+			token, err := auth.ValidateToken(strings.TrimSpace(strings.TrimPrefix(tokenStr,"Bearer ")), secretKey)
+			if err != nil || !token.Valid {
+				log.Println("Invalid token:", err)
+				utils.SendError(w, http.StatusUnauthorized, "invalid token")
+				return
+			}
+			claims := token.Claims.(jwt.MapClaims)
+			//userID := claims["user_id"].(string)
+			apiKey := claims["X-API-KEY"].(string)
+			// apiKey := strings.TrimSpace(r.Header.Get("X-API-Key"))
+            // log.Println(apiKey)
 			if apiKey == "" {
 				utils.SendError(w, http.StatusUnauthorized, "invalid API KEY")
 				return

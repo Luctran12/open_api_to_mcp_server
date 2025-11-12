@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"open_api_to_mcp_server/internal/builder"
@@ -97,6 +98,7 @@ func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	// Load tool from database
 	tool, err := h.db.GetTool(developer.ID, req.ToolName)
 	if err != nil || tool == nil {
+		log.Println("Tool not found:", err)
 		utils.SendError(w, 404, "Tool not found")
 		return
 	}

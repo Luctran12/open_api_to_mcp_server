@@ -7,7 +7,6 @@ import (
 	iconfig "open_api_to_mcp_server/internal/config"
 	"open_api_to_mcp_server/pkg/config"
 	"open_api_to_mcp_server/pkg/server"
-
 	"github.com/joho/godotenv"
 )
 
@@ -21,6 +20,11 @@ func main() {
 	}
 	// Load database URL from environment
 	dbURL := os.Getenv("DATABASE_URL")
+	//Load jwt secret from environment
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET not set")
+	}
 	log.Println("DATABASE_URL:", dbURL)
 	if dbURL == "" {
 		log.Fatal("DATABASE_URL not set")
@@ -33,7 +37,7 @@ func main() {
 	defer iconfig.CloseDB()
 
 	// Create a new server
-	srv, err := server.New(cfg, iconfig.DB)
+	srv, err := server.New(cfg, iconfig.DB,[]byte(jwtSecret))
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}
