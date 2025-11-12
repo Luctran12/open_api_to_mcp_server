@@ -45,6 +45,29 @@ func (db *DB) CreateDeveloper(email, passwordHash, apiKeyHash, apiKeyPrefix stri
 	return id, err
 }
 
+//get developer by id
+func (db *DB) GetDeveloperAPIKeyHashByID(developerID string) (string, error) {
+	var api string
+	err := db.conn.QueryRow(`
+		SELECT api_key_hash
+		FROM developers
+		WHERE id = $1
+	`, developerID).Scan(&api)
+	return api, err
+}
+
+//get developer by email
+func (db *DB) GetDeveloperByEmail(email string) (*Developer, error) {
+	var dev Developer
+	err := db.conn.QueryRow(`
+		SELECT id, email, password_hash, api_key_hash, created_at
+		FROM developers
+		WHERE email = $1
+	`, email).Scan(&dev.ID, &dev.Email, &dev.PasswordHash, &dev.APIKeyHash, &dev.CreatedAt)
+	return &dev, err
+}
+
+
 func(db *DB)GetNumberOfOpenAPISpecByDeveloperID(developerID string) (int, error) {
 	rows, err := db.conn.Query(`
 		SELECT id, developer_id, spec_name, spec_content, created_at, updated_at

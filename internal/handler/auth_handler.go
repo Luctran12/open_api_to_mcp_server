@@ -9,15 +9,23 @@ import (
 	"open_api_to_mcp_server/internal/auth"
 	"open_api_to_mcp_server/internal/database"
 	"open_api_to_mcp_server/pkg/utils"
+
+	"github.com/golang-jwt/jwt"
 )
 
 type AuthHandler struct {
     db *database.DB
+    SecretKey []byte
 }
 
-func NewAuthHandler(db *database.DB) *AuthHandler {
-    return &AuthHandler{db: db}
+func NewAuthHandler(db *database.DB, jwtSecret []byte) *AuthHandler {
+    return &AuthHandler{db: db, SecretKey: jwtSecret}
 }
+
+type LoginReq struct {
+       Email    string `json:"email"`
+       Password string `json:"password"`
+    }
 
 // POST /api/auth/register
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -75,8 +83,40 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 // POST /api/auth/login
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-    // TODO: Implement JWT-based login for dashboard
-    utils.SendError(w, 501, "Not implemented yet")
+   // Parse request
+   var req LoginReq
+   if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+       errStr := fmt.Sprintf("Invalid request body: %v", err)
+       utils.SendError(w, 400, errStr)
+       return
+   }
+    // Get developer by email
+    developer, err := h.db.GetDeveloperByEmail(req.Email)
+    if err != nil {
+        utils.SendError(w, 401, "Invalid email or password")
+        return
+    }
+    // Check password
+    // passHashed, err := auth.HashPassword(req.Password)
+    // if err != nil {
+    //     utils.SendError(w, 500, "Failed to hash password")
+    //     return
+    // }
+    if !auth.CheckPasswordHash(req.Password, developer.PasswordHash) {
+        utils.SendError(w, 401, "Invalid  password")
+        return
+    }
+    // Create JWT
+    token, err := auth.CreateJWT(h.SecretKey, developer.ID, h.db)
+    if err != nil {
+        utils.SendError(w, 500, "Failed to create JWT")
+        return
+    }
+    // Response
+    utils.SendSuccess(w, map[string]interface{}{
+        "JWTtoken": token,
+    })
+   
 }
 
 func (h *AuthHandler) GetAllDevelopers(w http.ResponseWriter, r *http.Request) {
@@ -86,4 +126,8 @@ func (h *AuthHandler) GetAllDevelopers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	utils.SendSuccess(w, developers)
+}
+
+func (h *AuthHandler) ValidateToken(token string) (*jwt.Token, error) {
+    return auth.ValidateToken(token, h.SecretKey)
 }

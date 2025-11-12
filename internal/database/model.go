@@ -9,6 +9,7 @@ type Developer struct {
     CompanyName string    `json:"company_name"`
     Plan        string    `json:"plan"`
     APIKeyHash  string    `json:"-"` // Don't expose in JSON
+    PasswordHash string    `json:"-"` // Don't expose in JSON
     CreatedAt   time.Time `json:"created_at"`
     UpdatedAt   time.Time `json:"updated_at"`
 }

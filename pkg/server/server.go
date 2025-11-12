@@ -22,7 +22,7 @@ type Server struct {
 }
 
 // New creates a new server instance
-func New(cfg *config.Config, db *database.DB) (*Server, error) {
+func New(cfg *config.Config, db *database.DB, secretJWTKey []byte) (*Server, error) {
 	mcpServer := NewMCPServer(cfg)
 
 	// Load initial tools
@@ -31,7 +31,7 @@ func New(cfg *config.Config, db *database.DB) (*Server, error) {
 	}
 
 	executeHandler := handler.NewExecuteHandler(iconfig.DB)
-	authHandler := handler.NewAuthHandler(iconfig.DB)
+	authHandler := handler.NewAuthHandler(iconfig.DB, secretJWTKey)
 	httpHandler := handler.NewHTTPHandler(&cfg.Auth)
 	specHandler := handler.NewSpecHandler(iconfig.DB)
 	toolHandler := handler.NewToolHandler(iconfig.DB)
