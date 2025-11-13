@@ -23,31 +23,43 @@ import (
 // define Middleware type
 type Middleware func(http.Handler) http.Handler
 
-// CORS Middleware
+var  whiteList []string = []string{"http://localhost:3000"}
+
 func CORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if origin != "" {
-			// Đảm bảo rằng giá trị của "Access-Control-Allow-Origin" khớp với giá trị "Origin" trong yêu cầu
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-		} else {
-			// Nếu không có Origin trong header, cho phép tất cả nguồn gốc (chỉ dùng khi thật sự cần thiết)
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-		}
-		
-		// Các header khác cần cho CORS
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization")
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        origin := r.Header.Get("Origin")
 
-		// Kiểm tra nếu là yêu cầu OPTIONS (preflight request)
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+        // Kiểm tra xem origin có hợp lệ không
+        if origin != "" && isOriginAllowed(origin) {
+            w.Header().Set("Access-Control-Allow-Origin", origin)
+        } else {
+            w.Header().Set("Access-Control-Allow-Origin", "")
+			w.WriteHeader(http.StatusForbidden) 
+    		w.Write([]byte("Forbidden: Origin not allowed"))
+        }
 
-		// Nếu không phải OPTIONS, gọi hàm xử lý tiếp theo
-		next.ServeHTTP(w, r)
-	})
+        // Các header khác cần cho CORS
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization, X-Requested-With")
+
+        // Nếu yêu cầu là OPTIONS (preflight request), trả về status OK
+        if r.Method == "OPTIONS" {
+            w.WriteHeader(http.StatusOK)
+            return
+        }
+
+        // Tiến hành xử lý tiếp theo
+        next.ServeHTTP(w, r)
+    })
+}
+
+func isOriginAllowed(origin string) bool {
+    for _, allowedOrigin := range whiteList {
+        if origin == allowedOrigin {
+            return true
+        }
+    }
+    return false
 }
 
 
