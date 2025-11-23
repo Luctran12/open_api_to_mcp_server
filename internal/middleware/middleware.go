@@ -58,7 +58,7 @@ func (g *gzipResponseWriter) Write(b []byte) (int, error) {
 
 // CORS Middleware
 
-var  whiteList []string = []string{"http://localhost:3000","https://open-api-to-mcp-server-fe.vercel.app/"}
+var  whiteList []string = []string{"http://localhost:3000","https://open-api-to-mcp-server-fe.vercel.app"}
 
 func CORS(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +70,7 @@ func CORS(next http.Handler) http.Handler {
         } else {
 			w.WriteHeader(http.StatusForbidden) 
            utils.SendError(w,http.StatusForbidden, "Forbidden: Origin not allowed")
-    		w.Write([]byte("Forbidden: Origin not allowed"))
+    		
             return
         }
 
