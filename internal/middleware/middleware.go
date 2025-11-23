@@ -58,27 +58,32 @@ func (g *gzipResponseWriter) Write(b []byte) (int, error) {
 
 // CORS Middleware
 
-var  whiteList []string = []string{"http://localhost:3000","https://open-api-to-mcp-server-fe.vercel.app"}
+var whiteList = []string{
+    "http://localhost:3000",
+    "https://open-api-to-mcp-server-fe.vercel.app",
+}
 
 func CORS(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         origin := r.Header.Get("Origin")
 
-        // Kiểm tra xem origin có hợp lệ không
+        // Kiểm tra Origin hợp lệ
         if origin != "" && isOriginAllowed(origin) {
             w.Header().Set("Access-Control-Allow-Origin", origin)
         } else {
-			w.WriteHeader(http.StatusForbidden) 
-           utils.SendError(w,http.StatusForbidden, "Forbidden: Origin not allowed")
-    		
+            w.WriteHeader(http.StatusForbidden)
+            utils.SendError(w, http.StatusForbidden, "Forbidden: Origin not allowed")
             return
         }
 
-        // Các header khác cần cho CORS
+        // Cho phép browser cache theo Origin
+        w.Header().Set("Vary", "Origin")
+
+        // Các header CORS cần thiết
         w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
         w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization, X-Requested-With")
 
-        // Nếu yêu cầu là OPTIONS (preflight request), trả về status OK
+        // Preflight request
         if r.Method == "OPTIONS" {
             w.WriteHeader(http.StatusOK)
             return
@@ -89,13 +94,14 @@ func CORS(next http.Handler) http.Handler {
 }
 
 func isOriginAllowed(origin string) bool {
-    for _, allowedOrigin := range whiteList {
-        if origin == allowedOrigin {
+    for _, allowed := range whiteList {
+        if origin == allowed {
             return true
         }
     }
     return false
 }
+
 
 
 // Logging Middleware - Ghi log chi tiết các yêu cầu HTTP dưới dạng JSON vào file log.json
