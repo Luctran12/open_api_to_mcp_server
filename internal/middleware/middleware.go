@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"os"
@@ -23,6 +24,40 @@ import (
 // define Middleware type
 type Middleware func(http.Handler) http.Handler
 
+//Gzip Compression Middleware
+
+
+func GzipCompression(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // Kiểm tra xem client có hỗ trợ gzip không
+        if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+            next.ServeHTTP(w, r)
+            return
+        }
+        // set the response header to indicate gzip encoding
+        w.Header().Set("Content-Encoding", "gzip")
+        gz := gzip.NewWriter(w)
+        defer gz.Close()
+
+        //wrap the response writer with gzip writer
+        w = &gzipResponseWriter{ResponseWriter: w, writer: gz}
+        next.ServeHTTP(w, r)
+    })
+}
+
+type gzipResponseWriter struct {
+    http.ResponseWriter
+    writer *gzip.Writer
+}
+
+func (g *gzipResponseWriter) Write(b []byte) (int, error) {
+    return g.writer.Write(b)
+}
+
+
+
+// CORS Middleware
+
 var  whiteList []string = []string{"http://localhost:3000"}
 
 func CORS(next http.Handler) http.Handler {
@@ -33,9 +68,10 @@ func CORS(next http.Handler) http.Handler {
         if origin != "" && isOriginAllowed(origin) {
             w.Header().Set("Access-Control-Allow-Origin", origin)
         } else {
-            w.Header().Set("Access-Control-Allow-Origin", "")
 			w.WriteHeader(http.StatusForbidden) 
+           utils.SendError(w,http.StatusForbidden, "Forbidden: Origin not allowed")
     		w.Write([]byte("Forbidden: Origin not allowed"))
+            return
         }
 
         // Các header khác cần cho CORS
@@ -48,7 +84,6 @@ func CORS(next http.Handler) http.Handler {
             return
         }
 
-        // Tiến hành xử lý tiếp theo
         next.ServeHTTP(w, r)
     })
 }
