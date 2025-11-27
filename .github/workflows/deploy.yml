@@ -71,7 +71,7 @@ jobs:
             #    Nó sẽ dùng file .env trong thư mục hiện tại
             sudo docker run -d \
               --env-file .env \
-              -p 8081:8081 \
+              -p 8080:8080 \
               --restart always \
               --name $CONTAINER_NAME \
               $IMAGE_NAME
