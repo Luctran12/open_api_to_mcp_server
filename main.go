@@ -7,17 +7,17 @@ import (
 	iconfig "open_api_to_mcp_server/internal/config"
 	"open_api_to_mcp_server/pkg/config"
 	"open_api_to_mcp_server/pkg/server"
-	"github.com/joho/godotenv"
+	
 )
 
 func main() {
 	// Load config
 	cfg := config.Load()
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("No .env file found, proceeding with environment variables")
-	}
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	log.Println("No .env file found, proceeding with environment variables")
+	// }
 	// Load database URL from environment
 	dbURL := os.Getenv("DATABASE_URL")
 	//Load jwt secret from environment
