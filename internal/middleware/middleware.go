@@ -68,15 +68,12 @@ func CORS(next http.Handler) http.Handler {
         origin := r.Header.Get("Origin")
 
         if origin != "" && isOriginAllowed(origin) {
+            // Thiết lập header CORS cho tất cả request, bao gồm OPTIONS
             w.Header().Set("Access-Control-Allow-Origin", origin)
             w.Header().Set("Vary", "Origin")
             w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
             w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization, X-Requested-With")
-            w.Header().Set("Access-Control-Allow-Credentials", "true") // nếu cần gửi cookie / token
-        } else {
-            w.WriteHeader(http.StatusForbidden)
-            utils.SendError(w, http.StatusForbidden, "Forbidden: Origin not allowed")
-            return
+            w.Header().Set("Access-Control-Allow-Credentials", "true")
         }
 
         // Preflight request
@@ -85,9 +82,17 @@ func CORS(next http.Handler) http.Handler {
             return
         }
 
+        // Nếu origin không hợp lệ với request thực tế
+        if origin != "" && !isOriginAllowed(origin) {
+            w.WriteHeader(http.StatusForbidden)
+            utils.SendError(w, http.StatusForbidden, "Forbidden: Origin not allowed")
+            return
+        }
+
         next.ServeHTTP(w, r)
     })
 }
+
 
 func isOriginAllowed(origin string) bool {
     for _, allowed := range whiteList {
