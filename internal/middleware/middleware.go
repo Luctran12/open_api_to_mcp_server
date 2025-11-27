@@ -67,21 +67,17 @@ func CORS(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         origin := r.Header.Get("Origin")
 
-        // Kiểm tra Origin hợp lệ
         if origin != "" && isOriginAllowed(origin) {
             w.Header().Set("Access-Control-Allow-Origin", origin)
+            w.Header().Set("Vary", "Origin")
+            w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+            w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization, X-Requested-With")
+            w.Header().Set("Access-Control-Allow-Credentials", "true") // nếu cần gửi cookie / token
         } else {
             w.WriteHeader(http.StatusForbidden)
             utils.SendError(w, http.StatusForbidden, "Forbidden: Origin not allowed")
             return
         }
-
-        // Cho phép browser cache theo Origin
-        w.Header().Set("Vary", "Origin")
-
-        // Các header CORS cần thiết
-        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization, X-Requested-With")
 
         // Preflight request
         if r.Method == "OPTIONS" {
