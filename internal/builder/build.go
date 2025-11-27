@@ -200,7 +200,7 @@ func BuildExecutable(spec openapi.Spec) (string, error) {
 	// 2. Sinh file main.go
 	safeName := sanitize(spec.Info.Title)
 	mainPath := filepath.Join(buildDir, "main.go")
-	outputPath := filepath.Join(buildDir, safeName)
+	outputPath := filepath.Join(buildDir, safeName + ".exe")
 
 	tmpl, err := template.New("main").Parse(templateContent)
 	if err != nil {
@@ -256,7 +256,7 @@ func BuildExecutable(spec openapi.Spec) (string, error) {
 
 	// 4. Build executable
 	cmd = exec.Command("go", "build", "-o", outputPath, mainPath)
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS=linux", "GOARCH=amd64")
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS=windows", "GOARCH=amd64")
 	cmd.Dir = buildDir // Chạy go build từ trong thư mục tạm
 
 	out, err := cmd.CombinedOutput()
