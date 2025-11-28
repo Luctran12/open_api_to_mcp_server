@@ -173,7 +173,7 @@ func (h *ExecuteHandler) Build(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    downloadURL := fmt.Sprintf("http://%s/api/build/download/%s", r.Host, url.PathEscape(filepath.Base(executablePath)))
+    downloadURL := fmt.Sprintf("https://%s/api/build/download/%s", r.Host, url.PathEscape(filepath.Base(executablePath)))
 
 	
 	utils.SendJSON(w, 200, utils.Response{
