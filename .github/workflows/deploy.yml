@@ -46,7 +46,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             # 1. Đi đến thư mục dự án (để lấy file .env)
-            cd /home/azureuser/open_api_to_mcp_server
+            cd /home/ubuntu/open_api_to_mcp_server
             
             # 2. Đặt biến cho dễ quản lý
             IMAGE_NAME="ghcr.io/luctran12/open-api-to-mcp-server:latest"
