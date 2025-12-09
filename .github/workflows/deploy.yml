@@ -37,7 +37,7 @@ jobs:
           tags: ghcr.io/luctran12/open-api-to-mcp-server:latest
 
       # 4. SSH vào VM Azure và thực hiện deploy
-      - name: Deploy to Azure VM via SSH
+      - name: Deploy to EC2 VM via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           # Dùng các secret bạn đã tạo (SSH_PRIVATE_KEY, SERVER_HOST, SERVER_USER)
