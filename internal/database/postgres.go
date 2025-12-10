@@ -33,10 +33,10 @@ func (db *DB) Close() error {
 func (db *DB) CreateDeveloper(email, passwordHash, apiKeyHash, apiKeyPrefix string) (string, error) {
 	var id string
 	err := db.conn.QueryRow(`
-        INSERT INTO developers (email, password_hash, api_key_hash, api_key_prefix)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO developers (email, password_hash, api_key_hash, api_key_prefix, company_name, plan)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id
-    `, email, passwordHash, apiKeyHash, apiKeyPrefix).Scan(&id)
+    `, email, passwordHash, apiKeyHash, apiKeyPrefix, "ctu", "free").Scan(&id)
 	if err != nil {
 		log.Printf("CreateDeveloper failed for email %s: %v", email, err)
 	} else {
