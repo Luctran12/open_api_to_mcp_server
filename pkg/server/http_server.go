@@ -90,7 +90,7 @@ func (s *HTTPServer) Start() error {
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.Handle("/api/build", authMiddleware(http.HandlerFunc(s.executeHandler.Build)))
 	mux.Handle("/api/build/download/", http.HandlerFunc(s.executeHandler.Download))
-
+	mux.Handle("/api/tools", authMiddleware(middleware.GzipCompression(http.HandlerFunc(s.toolHandler.GetTools))))
 	fmt.Printf("🚀 Starting HTTP server on %s ...\n", s.config.Server.HTTPPort)
 	return http.ListenAndServe(s.config.Server.HTTPPort, chainMiddleware)
 }

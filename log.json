@@ -94,3 +94,9 @@
 {"request_id":"7127f2dc-3774-48f5-9474-4637a40cce2a","method":"POST","url":"/api/execute","client_ip":"[::1]:64142","user_agent":"PostmanRuntime/7.50.0","referer":"","status_code":200,"response_time":"932.4435ms"}
 {"request_id":"b0238377-8f5b-46dc-994a-369758a57d89","method":"POST","url":"/api/execute","client_ip":"[::1]:64142","user_agent":"PostmanRuntime/7.50.0","referer":"","status_code":200,"response_time":"781.1152ms"}
 {"request_id":"decaefa8-b54a-453c-b82b-62a7eceb500c","method":"POST","url":"/api/execute","client_ip":"[::1]:64142","user_agent":"PostmanRuntime/7.50.0","referer":"","status_code":200,"response_time":"1.0831396s"}
+{"request_id":"419028c0-cd2c-42de-adc2-369db4a3dc15","method":"GET","url":"/api/tools","client_ip":"[::1]:61583","user_agent":"PostmanRuntime/7.49.1","referer":"","status_code":401,"response_time":"0s"}
+{"request_id":"317acad9-7058-4cb7-bc0f-4ed6d702a842","method":"POST","url":"/api/login","client_ip":"[::1]:50912","user_agent":"PostmanRuntime/7.49.1","referer":"","status_code":200,"response_time":"1.8634118s"}
+{"request_id":"9b6965e9-47c3-4e58-be3c-78f2d18410c1","method":"GET","url":"/api/tools","client_ip":"[::1]:50912","user_agent":"PostmanRuntime/7.49.1","referer":"","status_code":200,"response_time":"397.185ms"}
+{"request_id":"049e1f21-7593-4d1a-8119-d91083b0f2fb","method":"POST","url":"/api/execute","client_ip":"[::1]:61705","user_agent":"PostmanRuntime/7.49.1","referer":"","status_code":401,"response_time":"529.6µs"}
+{"request_id":"f7aba7f3-8d32-4086-97a0-4548845d57a2","method":"POST","url":"/api/execute","client_ip":"[::1]:61705","user_agent":"PostmanRuntime/7.49.1","referer":"","status_code":200,"response_time":"1.2524744s"}
+{"request_id":"d2df609e-eaff-475c-913e-5d5f97764678","method":"POST","url":"/api/execute","client_ip":"[::1]:50142","user_agent":"PostmanRuntime/7.49.1","referer":"","status_code":200,"response_time":"891.2205ms"}
