@@ -38,7 +38,7 @@ func (h *SpecHandler) UploadSpec(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Expect multipart/form-data with a file field named "file" (or fallback to "spec")
-	if err := r.ParseMultipartForm(1 << 20); err != nil { // 1MB
+	if err := r.ParseMultipartForm(5 << 20); err != nil { // 5MB
 		utils.SendError(w, 400, "Expected multipart/form-data with file upload")
 		fmt.Println(err.Error())
 		return
