@@ -86,6 +86,7 @@ func (s *HTTPServer) Start() error {
 	mux.HandleFunc("/mcp", s.handleMCP)
 	mux.Handle("/api/execute", authMiddleware(middleware.GzipCompression(http.HandlerFunc(s.executeHandler.Execute))))
 	mux.Handle("/upload", authMiddleware(http.HandlerFunc(s.specHandler.UploadSpec)))
+	mux.Handle("DELETE /api/specs/", authMiddleware(http.HandlerFunc(s.specHandler.DeleteSpec)))
 	mux.Handle("/api/specs", authMiddleware(middleware.GzipCompression(http.HandlerFunc(s.specHandler.ListSpecs))))
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.Handle("/api/build", authMiddleware(http.HandlerFunc(s.executeHandler.Build)))

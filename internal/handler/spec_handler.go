@@ -160,3 +160,18 @@ func (h *SpecHandler) ListSpecs(w http.ResponseWriter, r *http.Request) {
 		"count": len(specResponses),
 	})
 }
+
+// DELETE /api/specs/{spec_id}
+func (h *SpecHandler) DeleteSpec(w http.ResponseWriter, r *http.Request) {
+	developer := r.Context().Value("developer").(*database.Developer)	
+	specID := r.URL.Path[len("/api/specs/"):]
+	if specID == "" {
+		utils.SendError(w, 400, "Missing spec ID in URL")
+		return
+	}
+	err := h.db.DeleteOpenAPISpec(developer.ID, specID)
+	if err != nil {
+		utils.SendError(w, 500, "Failed to delete spec: "+err.Error())
+		return
+	}
+}

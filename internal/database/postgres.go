@@ -140,6 +140,14 @@ func (db *DB) GetDeveloperSpecs(developerID string) ([]OpenAPISpec, error) {
 	return specs, nil
 }
 
+func (db *DB) DeleteOpenAPISpec(developerID, specID string) error {
+	_, err := db.conn.Exec(`
+		DELETE FROM openapi_specs
+		WHERE id = $1 AND developer_id = $2
+	`, specID, developerID)
+	return err
+}
+
 // Tool operations
 func (db *DB) SaveTool(developerID, specID, toolName, description, method, urlPath string, inputSchema map[string]interface{}, requiresAuth bool) error {
 	schemaJSON, _ := json.Marshal(inputSchema)
